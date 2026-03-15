@@ -139,13 +139,14 @@
 
   .video-row {
     display: grid;
-    grid-template-columns: 48px 1fr;
+    grid-template-columns: 48px 1fr auto;
     gap: 0 14px;
     align-items: start;
     padding: 11px 0;
     border-bottom: 1px solid #141414;
   }
   .video-row:hover { background: #0d0d0d; }
+  .video-row:hover .dismiss-btn { color: #333; }
 
   .age-col {
     font-family: 'IBM Plex Mono', monospace;
@@ -217,6 +218,21 @@
     color: #2a2a2a;
   }
 
+  .video-row { grid-template-columns: 48px 1fr auto; }
+
+  .dismiss-btn {
+    background: none;
+    border: none;
+    color: #2a2a2a;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.15s;
+    align-self: center;
+  }
+  .dismiss-btn:hover { color: #ff4444; }
+
   #empty {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
@@ -251,6 +267,7 @@
     <button class="filter-btn" onclick="setFilter('spotify',this)">Su Spotify</button>
     <button class="filter-btn" onclick="setFilter('7',this)">7 giorni</button>
     <button class="filter-btn" onclick="setFilter('30',this)">30 giorni</button>
+    <button class="filter-btn" id="trash-btn" onclick="setFilter('dismissed',this)" style="margin-left:8px;">🗑 <span id="trash-count">0</span></button>
     <span id="count"></span>
   </div>
 </header>
@@ -447,14 +464,43 @@ function ageBucket(d) {
 
 let allVideos = [];
 let activeFilter = 'all';
+let dismissed = new Set(JSON.parse(localStorage.getItem('dismissed') || '[]'));
+
+function saveDismissed() {
+  localStorage.setItem('dismissed', JSON.stringify([...dismissed]));
+  document.getElementById('trash-count').textContent = dismissed.size;
+}
+
+function dismiss(videoId) {
+  dismissed.add(videoId);
+  saveDismissed();
+  // Remove row from DOM instantly
+  const row = document.getElementById(`row-${videoId}`);
+  if (row) { row.style.opacity = '0'; row.style.transition = 'opacity 0.2s'; setTimeout(()=>{ renderAll(); }, 200); }
+}
+
+function restoreAll() {
+  dismissed.clear();
+  saveDismissed();
+  activeFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.filter-btn').classList.add('active');
+  renderAll();
+}
 
 function getFiltered() {
   const q = document.getElementById('search').value.toLowerCase();
   let list = allVideos;
-  if (q) list = list.filter(v => v.title.toLowerCase().includes(q) || v.channelName.toLowerCase().includes(q));
-  if (activeFilter === 'spotify') list = list.filter(v => v.spotifyStatus === 'found');
-  else if (activeFilter === '7') list = list.filter(v => v.ageDays <= 7);
-  else if (activeFilter === '30') list = list.filter(v => v.ageDays <= 30);
+
+  if (activeFilter === 'dismissed') {
+    list = list.filter(v => dismissed.has(v.videoId));
+  } else {
+    list = list.filter(v => !dismissed.has(v.videoId));
+    if (q) list = list.filter(v => v.title.toLowerCase().includes(q) || v.channelName.toLowerCase().includes(q));
+    if (activeFilter === 'spotify') list = list.filter(v => v.spotifyStatus === 'found');
+    else if (activeFilter === '7') list = list.filter(v => v.ageDays <= 7);
+    else if (activeFilter === '30') list = list.filter(v => v.ageDays <= 30);
+  }
   return [...list].sort((a,b) => a.ageDays - b.ageDays || b.pubDate - a.pubDate);
 }
 
@@ -474,6 +520,15 @@ function renderAll() {
   empty.style.display = 'none';
 
   let html = '', curBucket = null;
+
+  // If viewing dismissed, show restore-all button
+  if (activeFilter === 'dismissed' && list.length > 0) {
+    html += `<div style="padding:16px 0 0; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);">
+      ${list.length} video scartati &nbsp;·&nbsp;
+      <button onclick="restoreAll()" style="background:none;border:1px solid #333;color:#888;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 8px;cursor:pointer;letter-spacing:0.08em;">RIPRISTINA TUTTI</button>
+    </div>`;
+  }
+
   list.forEach(v => {
     const b = ageBucket(v.ageDays);
     if (b !== curBucket) {
@@ -482,7 +537,7 @@ function renderAll() {
       html += `<div class="day-group"><div class="day-label">${esc(b)}</div>`;
     }
     html += `
-    <div class="video-row">
+    <div class="video-row" id="row-${esc(v.videoId)}">
       <div class="age-col"><span class="days">${v.ageDays}</span><span class="unit">gg</span></div>
       <div class="info-col">
         <a class="video-title" href="${esc(v.link)}" target="_blank" rel="noopener">${esc(v.title)}</a>
@@ -492,6 +547,10 @@ function renderAll() {
           <span id="sp-${esc(v.videoId)}">${renderSpotifyBadge(v)}</span>
         </div>
       </div>
+      ${activeFilter !== 'dismissed'
+        ? `<button class="dismiss-btn" onclick="dismiss('${esc(v.videoId)}')" title="Scarta">×</button>`
+        : `<button class="dismiss-btn" onclick="restore('${esc(v.videoId)}')" title="Ripristina" style="color:#555;font-size:13px;">↩</button>`
+      }
     </div>`;
   });
   if (curBucket !== null) html += '</div>';
@@ -506,6 +565,12 @@ function refreshSpotifyBadge(videoId) {
   if (activeFilter === 'spotify') renderAll();
 }
 
+function restore(videoId) {
+  dismissed.delete(videoId);
+  saveDismissed();
+  renderAll();
+}
+
 function applyFilters() { renderAll(); }
 function setFilter(f, btn) {
   activeFilter = f;
@@ -515,6 +580,8 @@ function setFilter(f, btn) {
 }
 
 async function init() {
+  // Sync trash count from localStorage on load
+  document.getElementById('trash-count').textContent = dismissed.size;
   const total = CHANNELS.length;
   let done = 0, totalVids = 0, failCount = 0;
   const BATCH = 8;
