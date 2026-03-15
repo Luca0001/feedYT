@@ -275,6 +275,7 @@
     <button class="filter-btn" onclick="setFilter('7',this)">7 giorni</button>
     <button class="filter-btn" onclick="setFilter('spotify',this)">Su Spotify</button>
     <button class="filter-btn" id="trash-btn" onclick="setFilter('dismissed',this)" style="margin-left:8px;">🗑 <span id="trash-count">0</span></button>
+    <button class="filter-btn" onclick="clearCacheAndReload()" style="margin-left:auto;" title="Svuota cache e ricarica i feed">↺ Aggiorna</button>
     <span id="count"></span>
   </div>
 </header>
@@ -603,6 +604,11 @@ function restore(videoId) {
   dismissed.delete(videoId);
   saveDismissed();
   renderAll();
+}
+
+function clearCacheAndReload() {
+  localStorage.removeItem(CACHE_KEY);
+  location.reload();
 }
 
 function applyFilters() { renderAll(); }
