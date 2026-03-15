@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feed Iscrizioni</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111;
+    --border: #222;
+    --accent: #e8ff00;
+    --text: #e0e0e0;
+    --muted: #555;
+    --channel: #888;
+    --spotify: #1db954;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  header h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  #progress-bar {
+    flex: 1;
+    min-width: 120px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  #progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  #status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  #controls {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  #search {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 6px 10px;
+    outline: none;
+    width: 200px;
+    transition: border-color 0.2s;
+  }
+  #search:focus { border-color: var(--accent); }
+  #search::placeholder { color: var(--muted); }
+
+  .filter-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 5px 9px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,0,0.05); }
+
+  #count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  #feed {
+    padding: 0 24px 60px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .day-group { margin-top: 28px; }
+
+  .day-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+
+  .video-row {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    gap: 0 14px;
+    align-items: start;
+    padding: 11px 0;
+    border-bottom: 1px solid #141414;
+  }
+  .video-row:hover { background: #0d0d0d; }
+  .video-row:hover .dismiss-btn { color: #333; }
+
+  .age-col {
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: right;
+    padding-top: 1px;
+  }
+  .age-col .days {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2e2e2e;
+    line-height: 1;
+    display: block;
+  }
+  .age-col .unit {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: #2e2e2e;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .info-col {}
+
+  .video-title {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    display: block;
+  }
+  .video-title:hover { color: var(--accent); }
+
+  .meta {
+    margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--channel);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .channel-name {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    letter-spacing: 0.02em;
+  }
+
+  .yt-link {
+    color: #c00;
+    text-decoration: none;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(200,0,0,0.25);
+    padding: 2px 6px;
+    transition: all 0.15s;
+  }
+  .yt-link:hover { background: rgba(200,0,0,0.1); border-color: #c00; }
+
+  .sp-link {
+    color: var(--spotify);
+    text-decoration: none;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(29,185,84,0.25);
+    padding: 2px 6px;
+    transition: all 0.15s;
+  }
+  .sp-link:hover { background: rgba(29,185,84,0.1); border-color: var(--spotify); }
+
+  .sp-checking {
+    font-size: 10px;
+    color: #2a2a2a;
+  }
+
+  .video-row { grid-template-columns: 48px 1fr auto; }
+
+  .dismiss-btn {
+    background: none;
+    border: none;
+    color: #1e1e1e;
+    font-size: 32px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 8px;
+    transition: color 0.15s;
+    align-self: center;
+  }
+  .dismiss-btn:hover { color: #ff4444; }
+
+  #empty {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    padding: 80px 0;
+    display: none;
+  }
+
+  #error-banner {
+    display: none;
+    background: #1a0000;
+    border: 1px solid #400;
+    color: #ff6666;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 10px 24px;
+    text-align: center;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Feed Iscrizioni</h1>
+  <div id="progress-bar"><div id="progress-fill"></div></div>
+  <div id="status">Avvio...</div>
+  <div id="controls">
+    <input type="text" id="search" placeholder="Cerca titolo o canale..." oninput="applyFilters()">
+    <button class="filter-btn active" onclick="setFilter('48h',this)">Ultime 48h</button>
+    <button class="filter-btn" onclick="setFilter('7',this)">7 giorni</button>
+    <button class="filter-btn" onclick="setFilter('spotify',this)">Su Spotify</button>
+    <button class="filter-btn" id="trash-btn" onclick="setFilter('dismissed',this)" style="margin-left:8px;">🗑 <span id="trash-count">0</span></button>
+    <button class="filter-btn" onclick="clearCacheAndReload()" style="margin-left:auto;" title="Svuota cache e ricarica i feed">↺ Aggiorna</button>
+    <span id="count"></span>
+  </div>
+</header>
+
+<div id="error-banner"></div>
+<div id="feed"></div>
+<div id="empty">Nessun risultato</div>
+
+<script>
+const CHANNELS = [
+  ["UC0Ize0RLIbGdH5x4wI45G-A","Drew Binsky"],
+  ["UC0Ku9Mx_Q6MYrnrLpv5R-KA","The BSMT by Gianluca Gazzoli"],
+  ["UC1wdm77sy8FMsadWP1fZwFQ","Nicola Jiang"],
+  ["UC3L_f2RwlldRF7Un2DYeJAQ","Oddity Islands"],
+  ["UC3XTzVzaHQEd30rQbuvCtTQ","LastWeekTonight"],
+  ["UC4V3oCikXeSqYQr0hBMARwg","Breaking Italy"],
+  ["UC5yXB_ThsufRJYMRlzIGoeQ","andreagaleazzi"],
+  ["UC6n4FXGXlVWJU9Rj0pWSzAQ","Francesco Baistrocchi"],
+  ["UC6nSFpj9HTCZ5t-N3Rm3-HA","Vsauce"],
+  ["UC6njEey49emrxFSzxPoKwFg","Caffè Design"],
+  ["UC6rMvMN5auRTqHlI2w5JO5w","Mig Babol"],
+  ["UC6x7GwJxuoABSosgVXDYtTw","I Like To Make Stuff"],
+  ["UC7GkPVpg45VICZ2mRMCgZyw","Jessica Kirson"],
+  ["UC7evKxok_28S6KiSvl6Zegg","Dario Zani - DriveZone Italia"],
+  ["UC8IKIlUPgPZ_NA1jKbsMfXw","Dario Bressanini Extra"],
+  ["UC8d1B6N_sEWr2Vkcn-AWY4g","Masterpilot Emiliano Perucca Orfei"],
+  ["UC8yOoFdxxhUXmgYtyXpbr3Q","BRECCIA"],
+  ["UC9gsMRG89x_EZD9UVXjFHuQ","Vaglia"],
+  ["UCB9-VTcQkAh-J7FpcinYj2A","HumanSafari"],
+  ["UCBJycsmduvYEL83R_U4JriQ","Marques Brownlee"],
+  ["UCC02-uPvsgRLGd2ypduH-iQ","Assembly Required"],
+  ["UCCDtBHQGboy9eTvNd_KqfTA","Progetto Happiness"],
+  ["UCGlmF5tM5DeT5Dl1BQVItYg","Sky Sport MotoGP"],
+  ["UCH-y44M0pvwaZx2rTq0rJoQ","Barbascura X"],
+  ["UCHA-Jrd72-L3plh59UAhE7g","Otto Climan"],
+  ["UCHi6Q3Z-5oJUC691WLlSntA","Barbascura eXtra"],
+  ["UCHnyfMqiRRG1u-2MsSQLbXA","Veritasium"],
+  ["UCIdYIrInVnUwHVbogLj6bqA","Riccardo Palombo"],
+  ["UCJphwa8Wsgzsm1zJS4sm-mA","Dario Bressanini"],
+  ["UCKgB2DwhuWAjc8qf1NyzIOQ","Francesco Sena"],
+  ["UCLourjpnG03AiaZ9TavTiug","SINNAGGAGGHIRI"],
+  ["UCLpGbBGYr9yCGbSwDEFvrMQ","Il signor Franz"],
+  ["UCM3hWnv_tshvTS660fhHH7A","Jimmy Tries World"],
+  ["UCM8BJHKSQrlvITe1TyC3Vsw","ELEAZARO"],
+  ["UCMK6UT4HQiOdtl-1SAxxO_w","Manuel Agostini"],
+  ["UCMOqf8ab-42UUQIdVoKwjlQ","Practical Engineering"],
+  ["UCMWzxEYbCNcKKsVYDYgIncQ","GPOne"],
+  ["UCO_SA_eFRJbVyfqWV8BKzCQ","Francesco Sgnaolin"],
+  ["UCPxnZ61PlkLm3TJIVX7fXvA","Dave Legenda"],
+  ["UCPzFLpOblZEaIx2lpym1l1A","Alex"],
+  ["UCQPnCKNfzKn4OmPrx1KDWvg","Entropy for Life - Giacomo Moro Mauretto"],
+  ["UCQ_vVgI2psqx1IpAp3Xumkw","The Zion Theory"],
+  ["UCR34kAAMqN7wVdJ4hoo2qWg","PoretCast di Giacomo Poretti"],
+  ["UCRCWJCFoZUvkkWzIqzfBy6g","Nova Lectio"],
+  ["UCRDjY_6yCZ8lH899DPTsE9A","Automoto.it"],
+  ["UCRyjbPwX4kvosfuaH9U0UxQ","Simone fini"],
+  ["UCS5PaGnSnFUnrjSc80XRnqw","Marcello Ascani"],
+  ["UCSWCIirfgS9kis3VP5OtNnQ","Beyond Ordinary Borders"],
+  ["UCTX1fx3_9I1VMp-SlRdjp8w","CriptoZoo - Lorenzo Rossi"],
+  ["UCTn8ys0gGzCdx3dmx-PfSNA","Dr. Walter Antonucci"],
+  ["UCUTpKHPxgPL7q2PxQht5R0w","TechDale"],
+  ["UCWIkgZzXznmBgU9uQsvjZAQ","Francesco Costa - Da Costa a Costa"],
+  ["UCWpk9PSGHoJW1hZT4egxTNQ","Ruhi Cenet Documentaries"],
+  ["UCY78BWn-Rzvo7_v2m4JW4BQ","BENZINE // Cosimo Curatola"],
+  ["UCY99TnBJ8xyat2lpeN_hcEA","Pulp Podcast"],
+  ["UCYcXk-yEg9LgyAPm7mpIs-g","Mark The Hammer"],
+  ["UCZH1ypQDpzzlHw5rrrvNYBg","Comedy Central Italia"],
+  ["UCZM5aON36Iw0o0ngTaQSWVA","Will Media"],
+  ["UCZmqdnHJ5xrni_SZ4cTcX0w","Giulio Brotini"],
+  ["UC_Usn7aUWcn__DdLNro5NZg","Riccardo Brotto"],
+  ["UC_kRDKYrUlrbtrSiyu5Tflg","Daft Punk"],
+  ["UCbkLSgCv8TbuadlICZBKCPg","Dott. Asado"],
+  ["UCeEQjsBz7okv4hZMX3y9siQ","Ombra Cristian"],
+  ["UCeVQh7YXMu2XGSsEqSLWPug","Il Brusa"],
+  ["UCh6uYkXWWwSh7shkCAfj7FQ","Gabriele Vagnato"],
+  ["UChdh22vqlOEBwUF6vX7PsHw","Pippo Ricciardi"],
+  ["UCiII_EIgKDmIZWn5jGKvLUA","Giancarlo Pedote"],
+  ["UCiIpJiNzhYE_t0qFfwQaHdQ","Luca Divona"],
+  ["UCitH5iJ0s-YwbuAg3MIo4Aw","AQUAHOLIC"],
+  ["UCjMIGhRExEB-Q6ZyEr1gBeA","Nicolò Balini"],
+  ["UCjR0Ts2DG84SG8N6wUAbDrQ","Nicola Andreetto Motoreetto"],
+  ["UCjt756Pw2WUatZovW9_qlFA","SINDROME DA SHOPPING"],
+  ["UCm2ELzgZTtLqqLlgAb-lGSQ","#ZamTube"],
+  ["UCmIIBhzBfzoAt51zqdun_6g","Moto.it"],
+  ["UCorGt7wO0pO6_1W1JHSf9cQ","Rumore"],
+  ["UCos3UOx4yI8p5rS0wXT7JSQ","Liam Gallagher"],
+  ["UCoyoYGVhKzfs1vCgAGoaOuw","Maurizio SaggiaMente"],
+  ["UCpHvDA_ladtos5LKzl8TzkA","Tech Gear Talk"],
+  ["UCq_k2y3AhLO_usP7rIMyduA","Memorabilia Collection"],
+  ["UCqiTqlZ3noxRwbEiAZoDufw","Jet Bent-Lee"],
+  ["UCqma_niJzHk4dZzi3XjAy6A","The Talking Helmet"],
+  ["UCrmNO6NZFip40k91cX8MmWQ","Marco Romboli"],
+  ["UCuL6cg-3m-ile8KOd5Q_Rtw","Fraffrog"],
+  ["UCuTRns0xX8TvPxFD1vTRJVA","Barassi Leader Dei Camper in Italia"],
+  ["UCuVQmkiETvqmLviDcBtQw4A","Nothing"],
+  ["UCw6ekhAtFahKr7gImCIoYwg","overVolt"],
+  ["UCwH61O10Jc1TyVLeaA5np3Q","151eg"],
+  ["UCxgAuX3XZROujMmGphN_scA","Mark Tilbury"],
+  ["UCy3jC5OdSSrrkbe_496i6gQ","Alex Melton"],
+  ["UCyHaMPx0k-TY4gyqmRT23Vg","Luca Perri"],
+  ["UCz-KJn98sMCPW5kjG0ZnE-Q","Jakidale"],
+];
+
+// ── Cache ──────────────────────────────────────────────
+const CACHE_KEY = 'feedCache_v2';
+const CACHE_TTL = 2 * 60 * 60 * 1000; // 2 ore
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { ts, videos } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) return null;
+    // Restore Date objects
+    videos.forEach(v => { v.pubDate = new Date(v.pubDate); });
+    return videos;
+  } catch(e) { return null; }
+}
+
+function saveCache(videos) {
+  try {
+    // Don't store spotifyStatus/spotifyUrl — recheck on load
+    const slim = videos.map(v => ({
+      title: v.title, link: v.link, channelName: v.channelName,
+      channelId: v.channelId, ageDays: v.ageDays,
+      pubDate: v.pubDate.toISOString(), videoId: v.videoId,
+      spotifyStatus: 'pending'
+    }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), videos: slim }));
+  } catch(e) { /* storage full, skip */ }
+}
+// ───────────────────────────────────────────────────────
+const PROXIES = [
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+
+let workingProxyIdx = 0;
+
+async function fetchWithProxy(url) {
+  // Try from last known working proxy first, then others
+  const order = [workingProxyIdx, ...PROXIES.map((_,i)=>i).filter(i=>i!==workingProxyIdx)];
+  for (const i of order) {
+    try {
+      const resp = await fetch(PROXIES[i](url), { signal: AbortSignal.timeout(9000) });
+      if (resp.ok) {
+        const text = await resp.text();
+        if (text && text.length > 50) {
+          workingProxyIdx = i;
+          return text;
+        }
+      }
+    } catch(e) { /* try next */ }
+  }
+  return null;
+}
+
+async function fetchChannelFeed(channelId, channelName) {
+  const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+  const text = await fetchWithProxy(url);
+  if (!text) return [];
+  try {
+    const xml = new DOMParser().parseFromString(text, 'application/xml');
+    if (xml.querySelector('parsererror')) return [];
+    const now = new Date();
+    return Array.from(xml.querySelectorAll('entry')).map(entry => {
+      const title = entry.querySelector('title')?.textContent?.trim() || '';
+      const link = entry.querySelector('link')?.getAttribute('href') || '';
+      const published = entry.querySelector('published')?.textContent || '';
+      const nsVideoId = entry.getElementsByTagNameNS('http://www.youtube.com/xml/schemas/2015','videoId')[0]?.textContent;
+      const videoId = nsVideoId || link.split('v=')[1]?.split('&')[0] || Math.random().toString(36).slice(2);
+      const pubDate = new Date(published);
+      const ageDays = Math.max(0, Math.floor((now - pubDate) / 86400000));
+      return { title, link, channelName, channelId, ageDays, pubDate, videoId, spotifyStatus: 'pending' };
+    }).filter(v => {
+      if (!v.title || !v.link) return false;
+      // Exclude YouTube Shorts
+      if (v.link.includes('/shorts/')) return false;
+      if (v.title.startsWith('#shorts') || v.title.startsWith('#Shorts') || v.title.startsWith('#SHORTS')) return false;
+      return true;
+    });
+  } catch(e) { return []; }
+}
+
+// iTunes podcast check per channel name (free, no auth)
+const podcastCache = {};
+async function hasPodcast(channelName) {
+  if (podcastCache[channelName] !== undefined) return podcastCache[channelName];
+  try {
+    const q = encodeURIComponent(channelName);
+    const resp = await fetch(`https://itunes.apple.com/search?term=${q}&entity=podcast&limit=5&country=IT`, {
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!resp.ok) { podcastCache[channelName] = false; return false; }
+    const data = await resp.json();
+    const found = data.results?.some(r => {
+      const name = (r.collectionName || r.artistName || '').toLowerCase();
+      const ch = channelName.toLowerCase();
+      return name.includes(ch) || ch.includes(name.split(' ')[0]);
+    }) || false;
+    podcastCache[channelName] = found;
+    return found;
+  } catch(e) {
+    podcastCache[channelName] = false;
+    return false;
+  }
+}
+
+function spotifyUrl(channelName, title) {
+  return `https://open.spotify.com/search/${encodeURIComponent(channelName + ' ' + title.slice(0,50))}/episodes`;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function ageBucket(d) {
+  if (d === 0) return 'Oggi';
+  if (d === 1) return 'Ieri';
+  if (d <= 6) return `${d} giorni fa`;
+  if (d <= 13) return '1 settimana fa';
+  if (d <= 20) return '2 settimane fa';
+  if (d <= 30) return '3–4 settimane fa';
+  const m = Math.floor(d/30);
+  return `${m} ${m===1?'mese':'mesi'} fa`;
+}
+
+let allVideos = [];
+let activeFilter = '48h';
+let dismissed = new Set(JSON.parse(localStorage.getItem('dismissed') || '[]'));
+
+function saveDismissed() {
+  localStorage.setItem('dismissed', JSON.stringify([...dismissed]));
+  document.getElementById('trash-count').textContent = dismissed.size;
+}
+
+function dismiss(videoId) {
+  dismissed.add(videoId);
+  saveDismissed();
+  // Remove row from DOM instantly
+  const row = document.getElementById(`row-${videoId}`);
+  if (row) { row.style.opacity = '0'; row.style.transition = 'opacity 0.2s'; setTimeout(()=>{ renderAll(); }, 200); }
+}
+
+function restoreAll() {
+  dismissed.clear();
+  saveDismissed();
+  activeFilter = '48h';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.filter-btn').classList.add('active');
+  renderAll();
+}
+
+function getFiltered() {
+  const q = document.getElementById('search').value.toLowerCase();
+  let list = allVideos;
+
+  if (activeFilter === 'dismissed') {
+    list = list.filter(v => dismissed.has(v.videoId));
+  } else {
+    list = list.filter(v => !dismissed.has(v.videoId));
+    if (q) list = list.filter(v => v.title.toLowerCase().includes(q) || v.channelName.toLowerCase().includes(q));
+    if (activeFilter === '48h') list = list.filter(v => v.ageDays <= 2);
+    else if (activeFilter === '7') list = list.filter(v => v.ageDays <= 7);
+    else if (activeFilter === 'spotify') list = list.filter(v => v.spotifyStatus === 'found');
+  }
+  return [...list].sort((a,b) => a.ageDays - b.ageDays || b.pubDate - a.pubDate);
+}
+
+function renderSpotifyBadge(v) {
+  if (v.spotifyStatus === 'pending') return `<span class="sp-checking">…</span>`;
+  if (v.spotifyStatus === 'found') return `<a class="sp-link" href="${esc(v.spotifyUrl)}" target="_blank" rel="noopener">SPOTIFY ↗</a>`;
+  return '';
+}
+
+function renderAll() {
+  const list = getFiltered();
+  const feed = document.getElementById('feed');
+  const empty = document.getElementById('empty');
+  document.getElementById('count').textContent = `${list.length} video`;
+
+  if (!list.length) { feed.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  let html = '';
+
+  if (activeFilter === 'dismissed' && list.length > 0) {
+    html += `<div style="padding:16px 0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);">
+      ${list.length} video scartati &nbsp;·&nbsp;
+      <button onclick="restoreAll()" style="background:none;border:1px solid #333;color:#888;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 8px;cursor:pointer;letter-spacing:0.08em;">RIPRISTINA TUTTI</button>
+    </div>`;
+  }
+
+  list.forEach(v => {
+    html += `
+    <div class="video-row" id="row-${esc(v.videoId)}">
+      <div class="age-col"><span class="days">${v.ageDays}</span><span class="unit">gg</span></div>
+      <div class="info-col">
+        <a class="video-title" href="${esc(v.link)}" target="_blank" rel="noopener">${esc(v.title)}</a>
+        <div class="meta">
+          <span class="channel-name">${esc(v.channelName)}</span>
+          <a class="yt-link" href="${esc(v.link)}" target="_blank" rel="noopener">YT ↗</a>
+          <span id="sp-${esc(v.videoId)}">${renderSpotifyBadge(v)}</span>
+        </div>
+      </div>
+      ${activeFilter !== 'dismissed'
+        ? `<button class="dismiss-btn" onclick="dismiss('${esc(v.videoId)}')" title="Scarta">×</button>`
+        : `<button class="dismiss-btn" onclick="restore('${esc(v.videoId)}')" title="Ripristina" style="color:#555;">↩</button>`
+      }
+    </div>`;
+  });
+
+  feed.innerHTML = html;
+}
+
+function refreshSpotifyBadge(videoId) {
+  const v = allVideos.find(x => x.videoId === videoId);
+  if (!v) return;
+  const el = document.getElementById(`sp-${videoId}`);
+  if (el) el.innerHTML = renderSpotifyBadge(v);
+  if (activeFilter === 'spotify') renderAll();
+}
+
+function restore(videoId) {
+  dismissed.delete(videoId);
+  saveDismissed();
+  renderAll();
+}
+
+function clearCacheAndReload() {
+  localStorage.removeItem(CACHE_KEY);
+  location.reload();
+}
+
+function applyFilters() { renderAll(); }
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+}
+
+async function init() {
+  document.getElementById('trash-count').textContent = dismissed.size;
+
+  // Try loading from cache first
+  const cached = loadCache();
+  if (cached) {
+    allVideos = cached;
+    document.getElementById('progress-fill').style.width = '100%';
+    document.getElementById('status').textContent = `${allVideos.length} video (cache) · verifica Spotify...`;
+    renderAll();
+    // Still run Spotify check (fast, per-channel)
+    await runSpotifyCheck();
+    document.getElementById('status').textContent = `${allVideos.length} video · pronto (cache)`;
+    renderAll();
+    return;
+  }
+
+  // Full fetch
+  const total = CHANNELS.length;
+  let done = 0, totalVids = 0, failCount = 0;
+  const BATCH = 8;
+
+  for (let i = 0; i < CHANNELS.length; i += BATCH) {
+    const batch = CHANNELS.slice(i, i + BATCH);
+    const results = await Promise.allSettled(batch.map(([id,name]) => fetchChannelFeed(id, name)));
+    results.forEach(r => {
+      if (r.status === 'fulfilled' && r.value.length) { allVideos.push(...r.value); totalVids += r.value.length; }
+      else failCount++;
+    });
+    done += batch.length;
+    document.getElementById('progress-fill').style.width = (done/total*100)+'%';
+    document.getElementById('status').textContent = `${done}/${total} canali · ${totalVids} video`;
+    renderAll();
+  }
+
+  if (totalVids === 0) {
+    const b = document.getElementById('error-banner');
+    b.style.display = 'block';
+    b.innerHTML = `⚠ Nessun feed caricato — il browser ha bloccato le richieste cross-origin.<br>
+    Carica questo file su <strong>GitHub Pages</strong> oppure aprilo con un server locale.`;
+    return;
+  }
+
+  saveCache(allVideos);
+  document.getElementById('status').textContent = `${totalVids} video · verifica Spotify...`;
+  await runSpotifyCheck();
+  document.getElementById('status').textContent = `${totalVids} video · pronto`;
+  renderAll();
+}
+
+async function runSpotifyCheck() {
+  const channelOrder = [...new Set(
+    [...allVideos].sort((a,b)=>a.ageDays-b.ageDays).map(v=>v.channelName)
+  )];
+  for (const channelName of channelOrder) {
+    const found = await hasPodcast(channelName);
+    allVideos.forEach(v => {
+      if (v.channelName !== channelName) return;
+      v.spotifyStatus = found ? 'found' : 'not-found';
+      if (found) v.spotifyUrl = spotifyUrl(channelName, v.title);
+      refreshSpotifyBadge(v.videoId);
+    });
+    await new Promise(r => setTimeout(r, 60));
+  }
+}
+
+init();
+</script>
+</body>
+</html>
