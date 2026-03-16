@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feed Iscrizioni</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --bg: #0a0a0a; --surface: #111; --border: #222;
+    --accent: #e8ff00; --text: #e0e0e0; --muted: #555;
+    --channel: #888; --spotify: #1db954;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", sans-serif; font-size: 16px; min-height: 100vh; }
+
+  header {
+    position: sticky; top: 0; z-index: 100; background: var(--bg);
+    border-bottom: 1px solid var(--border); padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  header h1 {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); white-space: nowrap;
+  }
+  #progress-bar { flex: 1; min-width: 60px; height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  #progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s ease; }
+  #status { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); white-space: nowrap; }
+  #controls { width: 100%; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .filter-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; padding: 7px 12px;
+    cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .filter-btn:hover, .filter-btn:active { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,0,0.05); }
+  #count { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); margin-left: auto; }
+
+  #feed { padding: 0 0 80px; max-width: 100%; }
+  @media (min-width: 700px) {
+    #feed { padding: 0 24px 80px; max-width: 900px; margin: 0 auto; }
+    header { padding: 14px 24px; }
+  }
+
+  .video-row {
+    display: grid; grid-template-columns: 52px 1fr auto; gap: 0 12px;
+    align-items: center; padding: 14px 16px; border-bottom: 1px solid #161616;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .video-row:hover { background: #0d0d0d; }
+  .video-row:hover .dismiss-btn { color: #333; }
+  @media (min-width: 700px) { .video-row { padding: 14px 0; } }
+
+  .age-col { font-family: "IBM Plex Mono", monospace; text-align: right; }
+  .age-col .days { font-size: 22px; font-weight: 600; color: #2a2a2a; line-height: 1; display: block; }
+  .age-col .unit { font-size: 9px; letter-spacing: 0.08em; color: #2a2a2a; display: block; margin-top: 2px; }
+
+  .channel-name {
+    font-family: "IBM Plex Sans", sans-serif; font-size: 13px; font-weight: 600;
+    color: #777; letter-spacing: 0.01em; display: block; margin-bottom: 4px;
+  }
+  .video-title {
+    color: var(--text); text-decoration: none; font-size: 15px;
+    font-weight: 400; line-height: 1.4; display: block;
+  }
+  .video-title:hover { color: var(--accent); }
+
+  .meta { margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .yt-link {
+    color: #dd2222; text-decoration: none; font-family: "IBM Plex Mono", monospace;
+    font-size: 14px; font-weight: 600; letter-spacing: 0.05em;
+    border: 1px solid rgba(200,0,0,0.3); padding: 6px 14px; transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .yt-link:hover, .yt-link:active { background: rgba(200,0,0,0.12); border-color: #dd2222; }
+
+  .sp-link {
+    color: var(--spotify); text-decoration: none; font-family: "IBM Plex Mono", monospace;
+    font-size: 14px; font-weight: 600; letter-spacing: 0.05em;
+    border: 1px solid rgba(29,185,84,0.3); padding: 6px 14px; transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sp-link:hover, .sp-link:active { background: rgba(29,185,84,0.12); border-color: var(--spotify); }
+
+  .sp-checking { font-size: 11px; color: #252525; }
+
+  .dismiss-btn {
+    background: none; border: none; color: #222; font-size: 40px; line-height: 1;
+    cursor: pointer; padding: 4px 10px; transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .dismiss-btn:hover, .dismiss-btn:active { color: #ff3333; }
+
+  #empty { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--muted); text-align: center; padding: 80px 0; display: none; }
+  #error-banner {
+    display: none; background: #1a0000; border: 1px solid #400; color: #ff6666;
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 10px 16px;
+    text-align: center; line-height: 1.6;
+  }
+
+  /* Modal */
+  #modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+    z-index: 200; overflow-y: auto;
+  }
+  #modal-overlay.open { display: block; }
+  #modal-box {
+    background: #0f0f0f; border: 1px solid var(--border);
+    margin: 40px auto; max-width: 560px; width: calc(100% - 32px); padding: 24px;
+  }
+  #modal-box h2 {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px;
+  }
+  #modal-subtitle { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+  #modal-close { float: right; background: none; border: none; color: var(--muted); font-size: 26px; cursor: pointer; line-height: 1; margin-top: -4px; }
+  #modal-close:hover { color: var(--text); }
+  .channel-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a; }
+  .channel-row-name { font-family: "IBM Plex Sans", sans-serif; font-size: 14px; color: var(--text); }
+  .channel-row-name.removed { color: var(--muted); text-decoration: line-through; }
+  .remove-channel-btn {
+    background: none; border: 1px solid #2a2a2a; color: #444;
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 5px 10px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; margin-left: 12px;
+  }
+  .remove-channel-btn:hover { border-color: #ff4444; color: #ff4444; }
+  .remove-channel-btn.undo { border-color: #555; color: #888; }
+  .remove-channel-btn.undo:hover { border-color: var(--accent); color: var(--accent); }
+  #modal-footer { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .modal-action-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 8px 16px;
+    cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; transition: all 0.15s;
+  }
+  .modal-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .modal-action-btn.primary { border-color: var(--accent); color: var(--accent); }
+  .modal-action-btn.primary:hover { background: rgba(232,255,0,0.08); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Feed</h1>
+  <div id="progress-bar"><div id="progress-fill"></div></div>
+  <div id="status">Avvio...</div>
+  <div id="controls">
+    <button class="filter-btn active" onclick="setFilter('48h',this)">48h</button>
+    <button class="filter-btn" onclick="setFilter('7',this)">7gg</button>
+    <button class="filter-btn" onclick="setFilter('spotify',this)">SPF</button>
+    <button class="filter-btn" id="trash-btn" onclick="setFilter('dismissed',this)">&#x1F5D1; <span id="trash-count">0</span></button>
+    <button class="filter-btn" onclick="openModal()">&#x270E;</button>
+    <button class="filter-btn" onclick="clearCacheAndReload()" title="Aggiorna feed">&#x21BA;</button>
+    <span id="count"></span>
+  </div>
+</header>
+
+<div id="error-banner"></div>
+<div id="feed"></div>
+<div id="empty">Nessun risultato</div>
+
+<div id="modal-overlay">
+  <div id="modal-box">
+    <button id="modal-close" onclick="closeModal()">&#xD7;</button>
+    <h2>Canali</h2>
+    <div id="modal-subtitle"></div>
+    <div id="modal-list"></div>
+    <div id="modal-footer">
+      <button class="modal-action-btn primary" onclick="applyChannelChanges()">Applica e ricarica</button>
+      <button class="modal-action-btn" onclick="closeModal()">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CHANNELS_DEFAULT = [
+  ["UC0Ize0RLIbGdH5x4wI45G-A","Drew Binsky"],
+  ["UC0Ku9Mx_Q6MYrnrLpv5R-KA","The BSMT by Gianluca Gazzoli"],
+  ["UC1wdm77sy8FMsadWP1fZwFQ","Nicola Jiang"],
+  ["UC3L_f2RwlldRF7Un2DYeJAQ","Oddity Islands"],
+  ["UC3XTzVzaHQEd30rQbuvCtTQ","LastWeekTonight"],
+  ["UC4V3oCikXeSqYQr0hBMARwg","Breaking Italy"],
+  ["UC5yXB_ThsufRJYMRlzIGoeQ","andreagaleazzi"],
+  ["UC6n4FXGXlVWJU9Rj0pWSzAQ","Francesco Baistrocchi"],
+  ["UC6nSFpj9HTCZ5t-N3Rm3-HA","Vsauce"],
+  ["UC6njEey49emrxFSzxPoKwFg","Caffe Design"],
+  ["UC6rMvMN5auRTqHlI2w5JO5w","Mig Babol"],
+  ["UC6x7GwJxuoABSosgVXDYtTw","I Like To Make Stuff"],
+  ["UC7GkPVpg45VICZ2mRMCgZyw","Jessica Kirson"],
+  ["UC7evKxok_28S6KiSvl6Zegg","Dario Zani - DriveZone Italia"],
+  ["UC8IKIlUPgPZ_NA1jKbsMfXw","Dario Bressanini Extra"],
+  ["UC8d1B6N_sEWr2Vkcn-AWY4g","Masterpilot Emiliano Perucca Orfei"],
+  ["UC8yOoFdxxhUXmgYtyXpbr3Q","BRECCIA"],
+  ["UC9gsMRG89x_EZD9UVXjFHuQ","Vaglia"],
+  ["UCB9-VTcQkAh-J7FpcinYj2A","HumanSafari"],
+  ["UCBJycsmduvYEL83R_U4JriQ","Marques Brownlee"],
+  ["UCC02-uPvsgRLGd2ypduH-iQ","Assembly Required"],
+  ["UCCDtBHQGboy9eTvNd_KqfTA","Progetto Happiness"],
+  ["UCGlmF5tM5DeT5Dl1BQVItYg","Sky Sport MotoGP"],
+  ["UCH-y44M0pvwaZx2rTq0rJoQ","Barbascura X"],
+  ["UCHA-Jrd72-L3plh59UAhE7g","Otto Climan"],
+  ["UCHi6Q3Z-5oJUC691WLlSntA","Barbascura eXtra"],
+  ["UCHnyfMqiRRG1u-2MsSQLbXA","Veritasium"],
+  ["UCIdYIrInVnUwHVbogLj6bqA","Riccardo Palombo"],
+  ["UCJphwa8Wsgzsm1zJS4sm-mA","Dario Bressanini"],
+  ["UCKgB2DwhuWAjc8qf1NyzIOQ","Francesco Sena"],
+  ["UCLourjpnG03AiaZ9TavTiug","SINNAGGAGGHIRI"],
+  ["UCLpGbBGYr9yCGbSwDEFvrMQ","Il signor Franz"],
+  ["UCM3hWnv_tshvTS660fhHH7A","Jimmy Tries World"],
+  ["UCM8BJHKSQrlvITe1TyC3Vsw","ELEAZARO"],
+  ["UCMK6UT4HQiOdtl-1SAxxO_w","Manuel Agostini"],
+  ["UCMOqf8ab-42UUQIdVoKwjlQ","Practical Engineering"],
+  ["UCMWzxEYbCNcKKsVYDYgIncQ","GPOne"],
+  ["UCO_SA_eFRJbVyfqWV8BKzCQ","Francesco Sgnaolin"],
+  ["UCPxnZ61PlkLm3TJIVX7fXvA","Dave Legenda"],
+  ["UCPzFLpOblZEaIx2lpym1l1A","Alex"],
+  ["UCQPnCKNfzKn4OmPrx1KDWvg","Entropy for Life - Giacomo Moro Mauretto"],
+  ["UCQ_vVgI2psqx1IpAp3Xumkw","The Zion Theory"],
+  ["UCR34kAAMqN7wVdJ4hoo2qWg","PoretCast di Giacomo Poretti"],
+  ["UCRCWJCFoZUvkkWzIqzfBy6g","Nova Lectio"],
+  ["UCRDjY_6yCZ8lH899DPTsE9A","Automoto.it"],
+  ["UCRyjbPwX4kvosfuaH9U0UxQ","Simone fini"],
+  ["UCS5PaGnSnFUnrjSc80XRnqw","Marcello Ascani"],
+  ["UCSWCIirfgS9kis3VP5OtNnQ","Beyond Ordinary Borders"],
+  ["UCTX1fx3_9I1VMp-SlRdjp8w","CriptoZoo - Lorenzo Rossi"],
+  ["UCTn8ys0gGzCdx3dmx-PfSNA","Dr. Walter Antonucci"],
+  ["UCUTpKHPxgPL7q2PxQht5R0w","TechDale"],
+  ["UCWIkgZzXznmBgU9uQsvjZAQ","Francesco Costa - Da Costa a Costa"],
+  ["UCWpk9PSGHoJW1hZT4egxTNQ","Ruhi Cenet Documentaries"],
+  ["UCY78BWn-Rzvo7_v2m4JW4BQ","BENZINE // Cosimo Curatola"],
+  ["UCY99TnBJ8xyat2lpeN_hcEA","Pulp Podcast"],
+  ["UCYcXk-yEg9LgyAPm7mpIs-g","Mark The Hammer"],
+  ["UCZH1ypQDpzzlHw5rrrvNYBg","Comedy Central Italia"],
+  ["UCZM5aON36Iw0o0ngTaQSWVA","Will Media"],
+  ["UCZmqdnHJ5xrni_SZ4cTcX0w","Giulio Brotini"],
+  ["UC_Usn7aUWcn__DdLNro5NZg","Riccardo Brotto"],
+  ["UC_kRDKYrUlrbtrSiyu5Tflg","Daft Punk"],
+  ["UCbkLSgCv8TbuadlICZBKCPg","Dott. Asado"],
+  ["UCeEQjsBz7okv4hZMX3y9siQ","Ombra Cristian"],
+  ["UCeVQh7YXMu2XGSsEqSLWPug","Il Brusa"],
+  ["UCh6uYkXWWwSh7shkCAfj7FQ","Gabriele Vagnato"],
+  ["UChdh22vqlOEBwUF6vX7PsHw","Pippo Ricciardi"],
+  ["UCiII_EIgKDmIZWn5jGKvLUA","Giancarlo Pedote"],
+  ["UCiIpJiNzhYE_t0qFfwQaHdQ","Luca Divona"],
+  ["UCitH5iJ0s-YwbuAg3MIo4Aw","AQUAHOLIC"],
+  ["UCjMIGhRExEB-Q6ZyEr1gBeA","Nicolo Balini"],
+  ["UCjR0Ts2DG84SG8N6wUAbDrQ","Nicola Andreetto Motoreetto"],
+  ["UCjt756Pw2WUatZovW9_qlFA","SINDROME DA SHOPPING"],
+  ["UCm2ELzgZTtLqqLlgAb-lGSQ","ZamTube"],
+  ["UCmIIBhzBfzoAt51zqdun_6g","Moto.it"],
+  ["UCorGt7wO0pO6_1W1JHSf9cQ","Rumore"],
+  ["UCos3UOx4yI8p5rS0wXT7JSQ","Liam Gallagher"],
+  ["UCoyoYGVhKzfs1vCgAGoaOuw","Maurizio SaggiaMente"],
+  ["UCpHvDA_ladtos5LKzl8TzkA","Tech Gear Talk"],
+  ["UCq_k2y3AhLO_usP7rIMyduA","Memorabilia Collection"],
+  ["UCqiTqlZ3noxRwbEiAZoDufw","Jet Bent-Lee"],
+  ["UCqma_niJzHk4dZzi3XjAy6A","The Talking Helmet"],
+  ["UCrmNO6NZFip40k91cX8MmWQ","Marco Romboli"],
+  ["UCuL6cg-3m-ile8KOd5Q_Rtw","Fraffrog"],
+  ["UCuTRns0xX8TvPxFD1vTRJVA","Barassi Leader Dei Camper in Italia"],
+  ["UCuVQmkiETvqmLviDcBtQw4A","Nothing"],
+  ["UCw6ekhAtFahKr7gImCIoYwg","overVolt"],
+  ["UCwH61O10Jc1TyVLeaA5np3Q","151eg"],
+  ["UCxgAuX3XZROujMmGphN_scA","Mark Tilbury"],
+  ["UCy3jC5OdSSrrkbe_496i6gQ","Alex Melton"],
+  ["UCyHaMPx0k-TY4gyqmRT23Vg","Luca Perri"],
+  ["UCz-KJn98sMCPW5kjG0ZnE-Q","Jakidale"],
+];
+
+const CHANNELS_KEY = "userChannels_v1";
+const CACHE_KEY = "feedCache_v2";
+const CACHE_TTL = 2 * 60 * 60 * 1000;
+
+function getChannels() {
+  try { const s = localStorage.getItem(CHANNELS_KEY); if (s) return JSON.parse(s); } catch(e) {}
+  return CHANNELS_DEFAULT;
+}
+function saveChannels(list) { localStorage.setItem(CHANNELS_KEY, JSON.stringify(list)); }
+let CHANNELS = getChannels();
+
+const PROXIES = [
+  url => "https://corsproxy.io/?" + encodeURIComponent(url),
+  url => "https://api.allorigins.win/raw?url=" + encodeURIComponent(url),
+  url => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url),
+];
+let workingProxyIdx = 0;
+
+async function fetchWithProxy(url) {
+  const order = [workingProxyIdx, ...PROXIES.map((_,i)=>i).filter(i=>i!==workingProxyIdx)];
+  for (const i of order) {
+    try {
+      const resp = await fetch(PROXIES[i](url), { signal: AbortSignal.timeout(9000) });
+      if (resp.ok) { const t = await resp.text(); if (t && t.length > 50) { workingProxyIdx = i; return t; } }
+    } catch(e) {}
+  }
+  return null;
+}
+
+async function fetchChannelFeed(channelId, channelName) {
+  const text = await fetchWithProxy("https://www.youtube.com/feeds/videos.xml?channel_id=" + channelId);
+  if (!text) return [];
+  try {
+    const xml = new DOMParser().parseFromString(text, "application/xml");
+    if (xml.querySelector("parsererror")) return [];
+    const now = new Date();
+    return Array.from(xml.querySelectorAll("entry")).map(entry => {
+      const title = entry.querySelector("title")?.textContent?.trim() || "";
+      const link = entry.querySelector("link")?.getAttribute("href") || "";
+      const published = entry.querySelector("published")?.textContent || "";
+      const nsVideoId = entry.getElementsByTagNameNS("http://www.youtube.com/xml/schemas/2015","videoId")[0]?.textContent;
+      const videoId = nsVideoId || link.split("v=")[1]?.split("&")[0] || Math.random().toString(36).slice(2);
+      const pubDate = new Date(published);
+      const ageDays = Math.max(0, Math.floor((now - pubDate) / 86400000));
+      return { title, link, channelName, channelId, ageDays, pubDate, videoId, spotifyStatus: "pending" };
+    }).filter(v => {
+      if (!v.title || !v.link) return false;
+      if (v.link.includes("/shorts/")) return false;
+      if (/^#shorts/i.test(v.title)) return false;
+      return true;
+    });
+  } catch(e) { return []; }
+}
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { ts, videos } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) return null;
+    videos.forEach(v => { v.pubDate = new Date(v.pubDate); });
+    return videos;
+  } catch(e) { return null; }
+}
+function saveCache(videos) {
+  try {
+    const slim = videos.map(v => ({
+      title: v.title, link: v.link, channelName: v.channelName,
+      channelId: v.channelId, ageDays: v.ageDays,
+      pubDate: v.pubDate.toISOString(), videoId: v.videoId, spotifyStatus: "pending"
+    }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), videos: slim }));
+  } catch(e) {}
+}
+
+const podcastCache = {};
+async function hasPodcast(channelName) {
+  if (podcastCache[channelName] !== undefined) return podcastCache[channelName];
+  try {
+    const resp = await fetch("https://itunes.apple.com/search?term=" + encodeURIComponent(channelName) + "&entity=podcast&limit=5&country=IT", { signal: AbortSignal.timeout(6000) });
+    if (!resp.ok) { podcastCache[channelName] = false; return false; }
+    const data = await resp.json();
+    const found = data.results?.some(r => {
+      const name = (r.collectionName || r.artistName || "").toLowerCase();
+      const ch = channelName.toLowerCase();
+      return name.includes(ch) || ch.includes(name.split(" ")[0]);
+    }) || false;
+    podcastCache[channelName] = found;
+    return found;
+  } catch(e) { podcastCache[channelName] = false; return false; }
+}
+function spotifyUrl(ch, title) {
+  return "https://open.spotify.com/search/" + encodeURIComponent(ch + " " + title.slice(0,50)) + "/episodes";
+}
+
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+let allVideos = [], activeFilter = "48h";
+let dismissed = new Set(JSON.parse(localStorage.getItem("dismissed") || "[]"));
+
+function saveDismissed() {
+  localStorage.setItem("dismissed", JSON.stringify([...dismissed]));
+  document.getElementById("trash-count").textContent = dismissed.size;
+}
+function dismiss(videoId) {
+  dismissed.add(videoId); saveDismissed();
+  const row = document.getElementById("row-" + videoId);
+  if (row) { row.style.opacity = "0"; row.style.transition = "opacity 0.18s"; setTimeout(()=>renderAll(), 200); }
+}
+function restore(videoId) { dismissed.delete(videoId); saveDismissed(); renderAll(); }
+function restoreAll() {
+  dismissed.clear(); saveDismissed(); activeFilter = "48h";
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector(".filter-btn").classList.add("active");
+  renderAll();
+}
+
+function getFiltered() {
+  if (activeFilter === "dismissed") return [...allVideos].filter(v => dismissed.has(v.videoId)).sort((a,b) => a.ageDays - b.ageDays || b.pubDate - a.pubDate);
+  let list = allVideos.filter(v => !dismissed.has(v.videoId));
+  if (activeFilter === "48h") list = list.filter(v => v.ageDays <= 2);
+  else if (activeFilter === "7") list = list.filter(v => v.ageDays <= 7);
+  else if (activeFilter === "spotify") list = list.filter(v => v.spotifyStatus === "found");
+  return [...list].sort((a,b) => a.ageDays - b.ageDays || b.pubDate - a.pubDate);
+}
+
+function renderSpotifyBadge(v) {
+  if (v.spotifyStatus === "pending") return "<span class=\"sp-checking\">...</span>";
+  if (v.spotifyStatus === "found") return "<a class=\"sp-link\" href=\"" + esc(v.spotifyUrl) + "\" target=\"_blank\" rel=\"noopener\">SPOTIFY &#x2197;</a>";
+  return "";
+}
+
+function renderAll() {
+  const list = getFiltered();
+  const feed = document.getElementById("feed");
+  const empty = document.getElementById("empty");
+  document.getElementById("count").textContent = list.length + " video";
+  if (!list.length) { feed.innerHTML = ""; empty.style.display = "block"; return; }
+  empty.style.display = "none";
+  let html = "";
+  if (activeFilter === "dismissed" && list.length > 0) {
+    html += "<div style=\"padding:14px 16px 6px;font-family:\x27IBM Plex Mono\x27,monospace;font-size:11px;color:var(--muted);\">" + list.length + " video scartati &nbsp;&middot;&nbsp;<button onclick=\"restoreAll()\" style=\"background:none;border:1px solid #333;color:#888;font-family:\x27IBM Plex Mono\x27,monospace;font-size:10px;padding:3px 8px;cursor:pointer;\">RIPRISTINA TUTTI</button></div>";
+  }
+  list.forEach(v => {
+    const dismissHtml = activeFilter !== "dismissed"
+      ? "<button class=\"dismiss-btn\" onclick=\"dismiss(\x27" + esc(v.videoId) + "\x27)\" title=\"Scarta\">&times;</button>"
+      : "<button class=\"dismiss-btn\" onclick=\"restore(\x27" + esc(v.videoId) + "\x27)\" title=\"Ripristina\" style=\"font-size:28px;\">&#x21A9;</button>";
+    html += "<div class=\"video-row\" id=\"row-" + esc(v.videoId) + "\">" +
+      "<div class=\"age-col\"><span class=\"days\">" + v.ageDays + "</span><span class=\"unit\">gg</span></div>" +
+      "<div class=\"info-col\">" +
+        "<span class=\"channel-name\">" + esc(v.channelName) + "</span>" +
+        "<a class=\"video-title\" href=\"" + esc(v.link) + "\" target=\"_blank\" rel=\"noopener\">" + esc(v.title) + "</a>" +
+        "<div class=\"meta\">" +
+          "<a class=\"yt-link\" href=\"" + esc(v.link) + "\" target=\"_blank\" rel=\"noopener\">YT &#x2197;</a>" +
+          "<span id=\"sp-" + esc(v.videoId) + "\">" + renderSpotifyBadge(v) + "</span>" +
+        "</div>" +
+      "</div>" + dismissHtml + "</div>";
+  });
+  feed.innerHTML = html;
+}
+
+function refreshSpotifyBadge(videoId) {
+  const v = allVideos.find(x => x.videoId === videoId);
+  if (!v) return;
+  const el = document.getElementById("sp-" + videoId);
+  if (el) el.innerHTML = renderSpotifyBadge(v);
+  if (activeFilter === "spotify") renderAll();
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  renderAll();
+}
+
+function clearCacheAndReload() { localStorage.removeItem(CACHE_KEY); location.reload(); }
+
+let pendingRemovals = new Set();
+function openModal() {
+  pendingRemovals = new Set();
+  const list = document.getElementById("modal-list");
+  document.getElementById("modal-subtitle").textContent = CHANNELS.length + " canali attivi";
+  list.innerHTML = "";
+  const sorted = [...CHANNELS].sort((a,b) => a[1].localeCompare(b[1], 'it', {sensitivity:'base'}));
+  sorted.forEach(([id, name]) => {
+    const row = document.createElement("div");
+    row.className = "channel-row";
+    row.id = "ch-row-" + id;
+    row.innerHTML = "<span class=\"channel-row-name\" id=\"ch-name-" + id + "\">" + esc(name) + "</span>" +
+      "<button class=\"remove-channel-btn\" id=\"ch-btn-" + id + "\" onclick=\"toggleRemoveChannel(\x27" + id + "\x27)\">Rimuovi</button>";
+    list.appendChild(row);
+  });
+  document.getElementById("modal-overlay").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function toggleRemoveChannel(id) {
+  const nameEl = document.getElementById("ch-name-" + id);
+  const btn = document.getElementById("ch-btn-" + id);
+  if (pendingRemovals.has(id)) {
+    pendingRemovals.delete(id);
+    nameEl.classList.remove("removed");
+    btn.textContent = "Rimuovi"; btn.classList.remove("undo");
+  } else {
+    pendingRemovals.add(id);
+    nameEl.classList.add("removed");
+    btn.textContent = "Annulla"; btn.classList.add("undo");
+  }
+  document.getElementById("modal-subtitle").textContent = pendingRemovals.size > 0
+    ? CHANNELS.length + " canali · " + pendingRemovals.size + " da rimuovere"
+    : CHANNELS.length + " canali attivi";
+}
+function applyChannelChanges() {
+  if (pendingRemovals.size === 0) { closeModal(); return; }
+  const newList = CHANNELS.filter(([id]) => !pendingRemovals.has(id));
+  saveChannels(newList); CHANNELS = newList;
+  localStorage.removeItem(CACHE_KEY);
+  closeModal(); location.reload();
+}
+function closeModal() {
+  document.getElementById("modal-overlay").classList.remove("open");
+  document.body.style.overflow = "";
+}
+document.getElementById("modal-overlay").addEventListener("click", e => {
+  if (e.target === document.getElementById("modal-overlay")) closeModal();
+});
+
+async function init() {
+  document.getElementById("trash-count").textContent = dismissed.size;
+  const cached = loadCache();
+  if (cached) {
+    allVideos = cached;
+    document.getElementById("progress-fill").style.width = "100%";
+    document.getElementById("status").textContent = allVideos.length + " video (cache)";
+    renderAll();
+    await runSpotifyCheck();
+    document.getElementById("status").textContent = allVideos.length + " video ✓";
+    renderAll(); return;
+  }
+  const total = CHANNELS.length;
+  let done = 0, totalVids = 0;
+  const BATCH = 8;
+  for (let i = 0; i < CHANNELS.length; i += BATCH) {
+    const batch = CHANNELS.slice(i, i + BATCH);
+    const results = await Promise.allSettled(batch.map(([id,name]) => fetchChannelFeed(id, name)));
+    results.forEach(r => { if (r.status === "fulfilled" && r.value.length) { allVideos.push(...r.value); totalVids += r.value.length; } });
+    done += batch.length;
+    document.getElementById("progress-fill").style.width = (done/total*100) + "%";
+    document.getElementById("status").textContent = done + "/" + total + " · " + totalVids + " video";
+    renderAll();
+  }
+  if (totalVids === 0) {
+    const b = document.getElementById("error-banner");
+    b.style.display = "block";
+    b.innerHTML = "⚠ Nessun feed caricato. Apri la pagina da GitHub Pages.";
+    return;
+  }
+  saveCache(allVideos);
+  document.getElementById("status").textContent = totalVids + " video · Spotify...";
+  await runSpotifyCheck();
+  document.getElementById("status").textContent = totalVids + " video ✓";
+  renderAll();
+}
+
+async function runSpotifyCheck() {
+  const channels = [...new Set([...allVideos].sort((a,b)=>a.ageDays-b.ageDays).map(v=>v.channelName))];
+  for (const ch of channels) {
+    const found = await hasPodcast(ch);
+    allVideos.forEach(v => {
+      if (v.channelName !== ch) return;
+      v.spotifyStatus = found ? "found" : "not-found";
+      if (found) v.spotifyUrl = spotifyUrl(ch, v.title);
+      refreshSpotifyBadge(v.videoId);
+    });
+    await new Promise(r => setTimeout(r, 60));
+  }
+}
+
+init();
+</script>
+</body>
+</html>
