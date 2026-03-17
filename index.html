@@ -6,11 +6,44 @@
 <title>Feed Iscrizioni</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  /* ── DARK (default) ── */
   :root {
     --bg: #0a0a0a; --surface: #111; --border: #222;
-    --accent: #e8ff00; --text: #e0e0e0; --muted: #555;
-    --channel: #888; --spotify: #1db954; --seen: #00c896;
+    --accent: #e8ff00; --accent-faint: rgba(232,255,0,0.05);
+    --text: #e0e0e0; --muted: #555; --muted2: #333;
+    --spotify: #1db954; --seen: #00c896;
+    --card-base: #0e0e0e; --card-mix: 7%; --card-mix-hover: 13%;
+    --age-mix: 50%; --age-mix2: 35%;
+    --log-row-border: #141414; --log-bar-bg: #1a1a1a;
+    --trash-header-border: #333; --trash-header-color: #888;
+    --seen-idle: #1a2e1a; --seen-hover: #1f3f1f;
+    --dismiss-idle: #222; --dismiss-hover: #333;
+    --modal-bg: #0f0f0f; --modal-ch-border: #1a1a1a;
+    --remove-btn-border: #2a2a2a; --remove-btn-color: #444;
+    --error-bg: #1a0000; --error-border: #400; --error-color: #ff6666;
+    --sp-checking: #252525;
   }
+  /* ── LIGHT ── */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f4f0; --surface: #fff; --border: #ddd;
+      --accent: #b8a800; --accent-faint: rgba(184,168,0,0.07);
+      --text: #1a1a1a; --muted: #999; --muted2: #ccc;
+      --spotify: #1db954; --seen: #009e72;
+      --card-base: #fafaf7; --card-mix: 9%; --card-mix-hover: 16%;
+      --age-mix: 60%; --age-mix2: 45%;
+      --log-row-border: #ebebeb; --log-bar-bg: #e0e0e0;
+      --trash-header-border: #ccc; --trash-header-color: #aaa;
+      --seen-idle: #d0ede5; --seen-hover: #a0ddd0;
+      --dismiss-idle: #ddd; --dismiss-hover: #bbb;
+      --modal-bg: #fff; --modal-ch-border: #eee;
+      --remove-btn-border: #ddd; --remove-btn-color: #bbb;
+      --error-bg: #fff0f0; --error-border: #ffbbbb; --error-color: #cc3333;
+      --sp-checking: #ccc;
+    }
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", sans-serif; font-size: 16px; min-height: 100vh; }
 
@@ -34,7 +67,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   .filter-btn:hover, .filter-btn:active { border-color: var(--accent); color: var(--accent); }
-  .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,0,0.05); }
+  .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
   #count { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); margin-left: auto; }
 
   #feed { padding: 0 0 80px; max-width: 100%; }
@@ -45,18 +78,23 @@
 
   /* ── Card stile A: colori per canale ── */
   .video-card {
-    margin: 8px 10px; border-radius: 5px; padding: 13px 13px 11px;
+    margin: 8px 10px; border-radius: 5px; padding: 0;
     border-left: 3px solid var(--ch-color, #333);
-    background: color-mix(in srgb, var(--ch-color, #333) 7%, #0e0e0e);
-    display: grid; grid-template-columns: 44px 1fr auto; gap: 0 12px; align-items: center;
+    background: color-mix(in srgb, var(--ch-color, #333) var(--card-mix), var(--card-base));
+    display: grid; grid-template-columns: 44px 1fr auto; gap: 0; align-items: stretch;
     -webkit-tap-highlight-color: transparent; transition: background 0.15s;
   }
-  .video-card:hover { background: color-mix(in srgb, var(--ch-color, #333) 13%, #111); }
+  .video-card:hover { background: color-mix(in srgb, var(--ch-color, #333) var(--card-mix-hover), var(--card-base)); }
   @media (min-width: 700px) { .video-card { margin: 8px 0; } }
 
-  .age-col { font-family: "IBM Plex Mono", monospace; text-align: right; }
-  .age-col .days { font-size: 20px; font-weight: 600; color: color-mix(in srgb, var(--ch-color, #333) 50%, #3a3a3a); line-height: 1; display: block; }
-  .age-col .unit { font-size: 9px; letter-spacing: 0.08em; color: color-mix(in srgb, var(--ch-color, #333) 35%, #2a2a2a); display: block; margin-top: 2px; }
+  .age-col {
+    font-family: "IBM Plex Mono", monospace; text-align: right;
+    padding: 13px 0 11px; display: flex; flex-direction: column; justify-content: center; align-items: flex-end;
+  }
+  .age-col .days { font-size: 20px; font-weight: 600; color: color-mix(in srgb, var(--ch-color, #333) var(--age-mix), #3a3a3a); line-height: 1; display: block; }
+  .age-col .unit { font-size: 9px; letter-spacing: 0.08em; color: color-mix(in srgb, var(--ch-color, #333) var(--age-mix2), #2a2a2a); display: block; margin-top: 2px; }
+
+  .info-col { padding: 13px 12px 11px; min-width: 0; }
 
   .channel-name {
     font-family: "IBM Plex Sans", sans-serif; font-size: 11px; font-weight: 600;
@@ -86,25 +124,28 @@
     -webkit-tap-highlight-color: transparent;
   }
   .sp-link:hover, .sp-link:active { background: rgba(29,185,84,0.12); border-color: var(--spotify); }
-  .sp-checking { font-size: 11px; color: #252525; }
+  .sp-checking { font-size: 11px; color: var(--sp-checking); }
 
-  /* ── Pulsanti azione: O (visto) e X (scarta) ── */
-  .action-btns { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+  /* ── Pulsanti azione: O (visto) e X (scarta) — fianco a fianco, altezza piena ── */
+  .action-btns {
+    display: flex; flex-direction: row; gap: 0; align-items: stretch; align-self: stretch;
+    border-left: 1px solid color-mix(in srgb, var(--ch-color, #333) 15%, transparent);
+  }
   .seen-btn, .dismiss-btn {
-    background: none; border: none; line-height: 1;
-    cursor: pointer; padding: 3px 6px; transition: color 0.15s;
+    background: none; border: none; line-height: 1; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; padding: 0 10px; transition: color 0.15s, background 0.15s; height: 100%;
     -webkit-tap-highlight-color: transparent; touch-action: manipulation;
   }
-  .seen-btn { font-size: 26px; color: #1a2e1a; }
-  .seen-btn:hover, .seen-btn:active { color: var(--seen); }
-  .dismiss-btn { font-size: 32px; color: #222; }
-  .dismiss-btn:hover, .dismiss-btn:active { color: #ff3333; }
-  .video-card:hover .seen-btn { color: #1f3f1f; }
-  .video-card:hover .dismiss-btn { color: #333; }
+  .seen-btn { font-size: 22px; color: var(--seen-idle); border-right: 1px solid color-mix(in srgb, var(--ch-color, #333) 12%, transparent); }
+  .seen-btn:hover, .seen-btn:active { color: var(--seen); background: color-mix(in srgb, var(--seen) 10%, transparent); }
+  .dismiss-btn { font-size: 28px; color: var(--dismiss-idle); }
+  .dismiss-btn:hover, .dismiss-btn:active { color: #ff3333; background: rgba(255,50,50,0.07); }
+  .video-card:hover .seen-btn { color: var(--seen-hover); }
+  .video-card:hover .dismiss-btn { color: var(--dismiss-hover); }
 
   #empty { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--muted); text-align: center; padding: 80px 0; display: none; }
   #error-banner {
-    display: none; background: #1a0000; border: 1px solid #400; color: #ff6666;
+    display: none; background: var(--error-bg); border: 1px solid var(--error-border); color: var(--error-color);
     font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 10px 16px;
     text-align: center; line-height: 1.6;
   }
@@ -121,22 +162,33 @@
   .log-table th.num { text-align: right; }
   .log-table td {
     font-family: "IBM Plex Sans", sans-serif; font-size: 13px;
-    padding: 7px 8px; border-bottom: 1px solid #141414; vertical-align: middle;
+    padding: 7px 8px; border-bottom: 1px solid var(--log-row-border); vertical-align: middle;
   }
   .log-table td.num { font-family: "IBM Plex Mono", monospace; font-size: 12px; text-align: right; color: var(--muted); }
   .log-swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 7px; vertical-align: middle; flex-shrink: 0; }
   .log-ch-cell { display: flex; align-items: center; }
-  .log-bar-wrap { flex: 1; max-width: 70px; background: #1a1a1a; height: 3px; border-radius: 2px; margin-left: 10px; }
+  .log-bar-wrap { flex: 1; max-width: 70px; background: var(--log-bar-bg); height: 3px; border-radius: 2px; margin-left: 10px; }
   .log-bar { height: 3px; border-radius: 2px; }
+  /* sospeso nel LOG */
+  .log-suspended td { opacity: 0.45; }
+  .log-suspended .log-ch-name { text-decoration: line-through; }
+  .log-suspend-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-family: "IBM Plex Mono", monospace; font-size: 10px; padding: 3px 8px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .log-suspend-btn:hover { border-color: #ff4444; color: #ff4444; }
+  .log-suspend-btn.undo { border-color: var(--muted2); color: var(--muted); }
+  .log-suspend-btn.undo:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ── Modal ── */
   #modal-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75);
     z-index: 200; overflow-y: auto;
   }
   #modal-overlay.open { display: block; }
   #modal-box {
-    background: #0f0f0f; border: 1px solid var(--border);
+    background: var(--modal-bg); border: 1px solid var(--border);
     margin: 40px auto; max-width: 560px; width: calc(100% - 32px); padding: 24px;
   }
   #modal-box h2 {
@@ -146,16 +198,16 @@
   #modal-subtitle { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); margin-bottom: 20px; }
   #modal-close { float: right; background: none; border: none; color: var(--muted); font-size: 26px; cursor: pointer; line-height: 1; margin-top: -4px; }
   #modal-close:hover { color: var(--text); }
-  .channel-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1a1a1a; }
+  .channel-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--modal-ch-border); }
   .channel-row-name { font-family: "IBM Plex Sans", sans-serif; font-size: 14px; color: var(--text); }
   .channel-row-name.removed { color: var(--muted); text-decoration: line-through; }
   .remove-channel-btn {
-    background: none; border: 1px solid #2a2a2a; color: #444;
+    background: none; border: 1px solid var(--remove-btn-border); color: var(--remove-btn-color);
     font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 5px 10px;
     cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; margin-left: 12px;
   }
   .remove-channel-btn:hover { border-color: #ff4444; color: #ff4444; }
-  .remove-channel-btn.undo { border-color: #555; color: #888; }
+  .remove-channel-btn.undo { border-color: var(--muted2); color: var(--muted); }
   .remove-channel-btn.undo:hover { border-color: var(--accent); color: var(--accent); }
   #modal-footer { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
   .modal-action-btn {
@@ -165,7 +217,44 @@
   }
   .modal-action-btn:hover { border-color: var(--accent); color: var(--accent); }
   .modal-action-btn.primary { border-color: var(--accent); color: var(--accent); }
-  .modal-action-btn.primary:hover { background: rgba(232,255,0,0.08); }
+  .modal-action-btn.primary:hover { background: var(--accent-faint); }
+
+  /* ── DEL modal ── */
+  #del-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    z-index: 300; overflow-y: auto;
+  }
+  #del-overlay.open { display: flex; align-items: center; justify-content: center; }
+  #del-box {
+    background: var(--modal-bg); border: 1px solid var(--border);
+    max-width: 400px; width: calc(100% - 32px); padding: 24px;
+  }
+  #del-box h2 {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.15em; text-transform: uppercase; color: #ff4444; margin-bottom: 12px;
+  }
+  #del-box p { font-family: "IBM Plex Sans", sans-serif; font-size: 14px; color: var(--text); margin-bottom: 18px; line-height: 1.5; }
+  #del-box p strong { color: #ff4444; }
+  #del-days-input {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    font-family: "IBM Plex Mono", monospace; font-size: 20px; font-weight: 600;
+    padding: 10px 14px; width: 100%; margin-bottom: 16px; text-align: center;
+  }
+  #del-days-input:focus { outline: none; border-color: #ff4444; }
+  .del-footer { display: flex; gap: 10px; }
+  .del-btn-cancel {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 8px 16px;
+    cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; transition: all 0.15s;
+  }
+  .del-btn-cancel:hover { border-color: var(--accent); color: var(--accent); }
+  .del-btn-confirm {
+    background: none; border: 1px solid #ff4444; color: #ff4444;
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 8px 16px;
+    cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; transition: all 0.15s;
+    flex: 1;
+  }
+  .del-btn-confirm:hover { background: rgba(255,60,60,0.1); }
 </style>
 </head>
 <body>
@@ -179,6 +268,7 @@
     <button class="filter-btn" onclick="setFilter('spotify',this)">SPF</button>
     <button class="filter-btn" id="trash-btn" onclick="setFilter('dismissed',this)">&#x1F5D1; <span id="trash-count">0</span></button>
     <button class="filter-btn" onclick="setFilter('log',this)">LOG</button>
+    <button class="filter-btn" onclick="openDelModal()" title="Elimina video vecchi" style="color:#ff5555;border-color:#441111;">DEL</button>
     <button class="filter-btn" onclick="clearCacheAndReload()" title="Aggiorna feed">&#x21BA;</button>
     <span id="count"></span>
   </div>
@@ -201,8 +291,19 @@
     </div>
   </div>
 </div>
+<div id="del-overlay">
+  <div id="del-box">
+    <h2>&#x26A0; Elimina video vecchi</h2>
+    <p>Elimina dal feed tutti i video più vecchi di <strong><span id="del-days-preview">7</span> giorni</strong>.<br>Verranno marcati come scartati e rimossi dalla vista. Operazione reversibile dal cestino.</p>
+    <input id="del-days-input" type="number" min="1" max="365" value="7" oninput="document.getElementById('del-days-preview').textContent=this.value">
+    <div class="del-footer">
+      <button class="del-btn-cancel" onclick="closeDelModal()">Annulla</button>
+      <button class="del-btn-confirm" onclick="confirmDel()">Elimina video &gt; <span id="del-days-confirm">7</span> gg</button>
+    </div>
+  </div>
+</div>
 
-<script>
+
 const CHANNELS_DEFAULT = [
   ["UC0Ize0RLIbGdH5x4wI45G-A","Drew Binsky"],
   ["UC0Ku9Mx_Q6MYrnrLpv5R-KA","The BSMT by Gianluca Gazzoli"],
@@ -513,14 +614,14 @@ function renderAll() {
   if (activeFilter === "dismissed" && list.length > 0) {
     html += "<div style=\"padding:12px 10px 4px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);\">"
       + list.length + " scartati &nbsp;&middot;&nbsp;"
-      + "<button onclick=\"restoreAll()\" style=\"background:none;border:1px solid #333;color:#888;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 8px;cursor:pointer;\">RIPRISTINA TUTTI</button></div>";
+      + "<button onclick=\"restoreAll()\" style=\"background:none;border:1px solid var(--trash-header-border);color:var(--trash-header-color);font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 8px;cursor:pointer;\">RIPRISTINA TUTTI</button></div>";
   }
 
   list.forEach(v => {
     const color = channelColor(v.channelId);
     const isTrash = activeFilter === "dismissed";
     const actionBtns = isTrash
-      ? "<div class=\"action-btns\"><button class=\"dismiss-btn\" onclick=\"restore('" + esc(v.videoId) + "')\" title=\"Ripristina\" style=\"font-size:22px;\">&#x21A9;</button></div>"
+      ? "<div class=\"action-btns\"><button class=\"dismiss-btn\" onclick=\"restore('" + esc(v.videoId) + "')\" title=\"Ripristina\">&#x21A9;</button></div>"
       : "<div class=\"action-btns\">"
           + "<button class=\"seen-btn\" onclick=\"markSeen('" + esc(v.videoId) + "')\" title=\"Visto\">&#x25CB;</button>"
           + "<button class=\"dismiss-btn\" onclick=\"dismiss('" + esc(v.videoId) + "')\" title=\"Scarta\">&times;</button>"
@@ -542,7 +643,10 @@ function renderAll() {
   feed.innerHTML = html;
 }
 
-// ── LOG: tabella counter per canale ──
+// ── LOG: tabella counter per canale + sospensione ──
+let suspendedChannels = new Set(JSON.parse(localStorage.getItem("suspendedChannels") || "[]"));
+function saveSuspended() { localStorage.setItem("suspendedChannels", JSON.stringify([...suspendedChannels])); }
+
 function renderLog() {
   document.getElementById("feed").innerHTML = "";
   document.getElementById("empty").style.display = "none";
@@ -551,7 +655,7 @@ function renderLog() {
   allVideos.forEach(v => {
     if (!stats[v.channelId]) stats[v.channelId] = { name: v.channelName, id: v.channelId, total: 0, seen: 0, dismissed: 0 };
     stats[v.channelId].total++;
-    if (seen.has(v.videoId))      stats[v.channelId].seen++;
+    if (seen.has(v.videoId))           stats[v.channelId].seen++;
     else if (dismissed.has(v.videoId)) stats[v.channelId].dismissed++;
   });
 
@@ -566,22 +670,26 @@ function renderLog() {
     + "<th class=\"num\">&#x25CB; Visti</th>"
     + "<th class=\"num\">&#xD7; Scartati</th>"
     + "<th class=\"num\">Da vedere</th>"
+    + "<th></th>"
     + "</tr></thead><tbody>";
 
   rows.forEach(r => {
-    const color   = channelColor(r.id);
-    const rimasti = r.total - r.seen - r.dismissed;
-    const pct     = Math.round((r.total / maxTotal) * 100);
-    html += "<tr>"
+    const color    = channelColor(r.id);
+    const rimasti  = r.total - r.seen - r.dismissed;
+    const pct      = Math.round((r.total / maxTotal) * 100);
+    const susp     = suspendedChannels.has(r.id);
+    html += "<tr class=\"" + (susp ? "log-suspended" : "") + "\" id=\"log-row-" + r.id + "\">"
       + "<td><div class=\"log-ch-cell\">"
         + "<span class=\"log-swatch\" style=\"background:" + color + "\"></span>"
-        + "<span>" + esc(r.name) + "</span>"
+        + "<span class=\"log-ch-name\">" + esc(r.name) + "</span>"
         + "<span class=\"log-bar-wrap\"><span class=\"log-bar\" style=\"width:" + pct + "%;background:" + color + "\"></span></span>"
       + "</div></td>"
       + "<td class=\"num\">" + r.total + "</td>"
       + "<td class=\"num\" style=\"color:var(--seen)\">" + (r.seen || "–") + "</td>"
       + "<td class=\"num\" style=\"color:#ff5555\">" + (r.dismissed || "–") + "</td>"
       + "<td class=\"num\">" + rimasti + "</td>"
+      + "<td class=\"num\"><button class=\"log-suspend-btn" + (susp ? " undo" : "") + "\" onclick=\"toggleSuspend('" + r.id + "')\">"
+        + (susp ? "Ripristina" : "Sospendi") + "</button></td>"
     + "</tr>";
   });
 
@@ -589,6 +697,19 @@ function renderLog() {
   const logView = document.getElementById("log-view");
   logView.innerHTML = html;
   logView.style.display = "block";
+}
+
+function toggleSuspend(channelId) {
+  if (suspendedChannels.has(channelId)) {
+    suspendedChannels.delete(channelId);
+  } else {
+    suspendedChannels.add(channelId);
+    // segna tutti i video di quel canale come dismissed
+    allVideos.forEach(v => { if (v.channelId === channelId) dismissed.add(v.videoId); });
+    saveDismissed();
+  }
+  saveSuspended();
+  renderLog();
 }
 
 function refreshSpotifyBadge(videoId) {
@@ -605,6 +726,40 @@ function setFilter(f, btn) {
   btn.classList.add("active");
   renderAll();
 }
+
+// ── DEL modal ──
+function openDelModal() {
+  const inp = document.getElementById("del-days-input");
+  inp.value = 7;
+  document.getElementById("del-days-preview").textContent = 7;
+  document.getElementById("del-days-confirm").textContent = 7;
+  inp.oninput = () => {
+    document.getElementById("del-days-preview").textContent = inp.value;
+    document.getElementById("del-days-confirm").textContent = inp.value;
+  };
+  document.getElementById("del-overlay").classList.add("open");
+  document.body.style.overflow = "hidden";
+  setTimeout(() => inp.focus(), 50);
+}
+function closeDelModal() {
+  document.getElementById("del-overlay").classList.remove("open");
+  document.body.style.overflow = "";
+}
+function confirmDel() {
+  const days = parseInt(document.getElementById("del-days-input").value, 10);
+  if (isNaN(days) || days < 1) return;
+  let count = 0;
+  allVideos.forEach(v => {
+    if (v.ageDays > days) { dismissed.add(v.videoId); count++; }
+  });
+  saveDismissed();
+  closeDelModal();
+  renderAll();
+  document.getElementById("status").textContent = count + " video eliminati (>" + days + " gg)";
+}
+document.getElementById("del-overlay").addEventListener("click", e => {
+  if (e.target === document.getElementById("del-overlay")) closeDelModal();
+});
 
 function clearCacheAndReload() { localStorage.removeItem(CACHE_KEY); location.reload(); }
 
