@@ -6,14 +6,12 @@
     <title>Feed Iscrizioni Sync</title>
     <style>
         @import url('https://googleapis.com');
-
         :root {
             --bg: #0a0a0a; --surface: #111; --border: #222;
             --accent: #e8ff00; --accent-faint: rgba(232,255,0,0.05);
             --text: #e0e0e0; --muted: #555;
             --seen: #00c896; --error-color: #ff6666;
         }
-
         @media (prefers-color-scheme: light) {
             :root {
                 --bg: #f4f4f0; --surface: #fff; --border: #ddd;
@@ -22,101 +20,57 @@
                 --seen: #009e72;
             }
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", sans-serif; font-size: 16px; min-height: 100vh; }
-
-        header {
-            position: sticky; top: 0; z-index: 100; background: var(--bg);
-            border-bottom: 1px solid var(--border); padding: 12px 16px;
-            display: flex; flex-direction: column; gap: 10px;
-        }
-        
+        header { position: sticky; top: 0; z-index: 100; background: var(--bg); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
         .header-top { display: flex; justify-content: space-between; align-items: center; }
         h1 { font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }
         #status { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--muted); }
-
         .nav-btns { display: flex; gap: 8px; }
-        .filter-btn {
-            background: none; border: 1px solid var(--border); color: var(--muted);
-            font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 6px 12px;
-            cursor: pointer; text-transform: uppercase; transition: all 0.15s;
-        }
+        .filter-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 6px 12px; cursor: pointer; text-transform: uppercase; transition: all 0.15s; }
         .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
-
         .stats-container { padding: 16px; max-width: 900px; margin: 0 auto; }
         .stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
         .stat-card { background: var(--surface); padding: 15px; border-left: 3px solid var(--accent); }
         .stat-label { display: block; font-size: 10px; font-family: "IBM Plex Mono"; color: var(--muted); text-transform: uppercase; }
         .stat-num { font-size: 24px; font-weight: 600; color: var(--text); }
-
-        .channel-row { 
-            padding: 12px; border-bottom: 1px solid var(--border); 
-            display: flex; justify-content: space-between; align-items: center;
-        }
+        .channel-row { padding: 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .ch-name { font-weight: 600; cursor: pointer; color: var(--accent); text-decoration: underline; }
-        .ch-perc { font-family: "IBM Plex Mono"; font-size: 12px; }
-
         #feed { padding: 10px; max-width: 900px; margin: 0 auto; }
-        .video-card {
-            background: var(--surface); margin-bottom: 10px; border-radius: 4px;
-            display: grid; grid-template-columns: 1fr auto; padding: 12px; gap: 10px;
-            border: 1px solid var(--border);
-        }
+        .video-card { background: var(--surface); margin-bottom: 10px; border-radius: 4px; display: grid; grid-template-columns: 1fr auto; padding: 12px; gap: 10px; border: 1px solid var(--border); }
         .video-info { min-width: 0; }
         .video-title { font-size: 15px; text-decoration: none; color: var(--text); display: block; margin-bottom: 4px; line-height: 1.3; }
         .channel-tag { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
         .actions { display: flex; gap: 8px; }
-        .btn { 
-            width: 40px; height: 40px; border: 1px solid var(--border); 
-            background: none; color: var(--muted); cursor: pointer; 
-            font-family: "IBM Plex Mono"; font-size: 18px;
-        }
+        .btn { width: 40px; height: 40px; border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; font-family: "IBM Plex Mono"; font-size: 18px; }
         .btn-seen:hover { color: var(--seen); border-color: var(--seen); }
         .btn-dismiss:hover { color: var(--error-color); border-color: var(--error-color); }
-
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
-
 <header>
-    <div class="header-top">
-        <h1>Feed Manager</h1>
-        <div id="status">Sincronizzazione...</div>
-    </div>
+    <div class="header-top"><h1>Feed Manager</h1><div id="status">Sincronizzazione...</div></div>
     <div class="nav-btns">
         <button id="btn-feed" class="filter-btn active" onclick="showTab('feed')">Feed</button>
         <button id="btn-log" class="filter-btn" onclick="showTab('log')">Log & Stats</button>
     </div>
 </header>
-
-<div id="tab-feed">
-    <div id="feed"></div>
-</div>
-
+<div id="tab-feed"><div id="feed"></div></div>
 <div id="tab-log" class="hidden">
     <div class="stats-container">
         <div class="stats-summary">
-            <div class="stat-card">
-                <span class="stat-label">Visti Totali</span>
-                <span id="total-seen" class="stat-num">0</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-label">Scartati Totali</span>
-                <span id="total-dismissed" class="stat-num">0</span>
-            </div>
+            <div class="stat-card"><span class="stat-label">Visti</span><span id="total-seen" class="stat-num">0</span></div>
+            <div class="stat-card"><span class="stat-label">Scartati</span><span id="total-dismissed" class="stat-num">0</span></div>
         </div>
         <h3>Performance Canali (% Scarto)</h3>
         <div id="channel-list-stats" style="margin-top: 15px;"></div>
     </div>
 </div>
-
 <script>
-    // URL CORRETTO DELLO SCRIPT
     const GOOGLE_URL = 'https://google.com';
     
-    // Inserisci qui gli ID dei canali che vuoi seguire
+    // AGGIUNGI QUI I TUOI CANALI
     const CHANNELS = [
         'UC_x5XG1OV2P6uYZ5FSM9P_A', 
         'UCv6UtMS5BAX_X6SjI3HtoOg'
@@ -128,13 +82,12 @@
     async function loadData() {
         try {
             const r = await fetch(GOOGLE_URL);
-            if (!r.ok) throw new Error();
             videoState = await r.json();
             document.getElementById('status').innerText = "Sincronizzato";
             fetchRSS();
         } catch (e) {
             document.getElementById('status').innerText = "Errore connessione";
-            fetchRSS(); // Prova comunque a caricare i video
+            fetchRSS();
         }
     }
 
@@ -160,7 +113,7 @@
                 if(data.items) {
                     data.items.forEach(item => {
                         allVideosCached.push({
-                            id: item.guid.split(':')[2],
+                            id: item.guid.split(':').pop(),
                             title: item.title,
                             channel: item.author,
                             link: item.link,
@@ -181,14 +134,12 @@
             const state = videoState[v.id]?.status;
             if (!filterChannel && state) return; 
             if (filterChannel && v.channel !== filterChannel) return;
-
             const card = document.createElement('div');
             card.className = 'video-card';
             card.innerHTML = `
                 <div class="video-info">
                     <span class="channel-tag">${v.channel}</span>
                     <a href="${v.link}" target="_blank" class="video-title">${v.title}</a>
-                    ${state ? `<span style="font-size:10px; color:var(--accent)">Stato: ${state.toUpperCase()}</span>` : ''}
                 </div>
                 <div class="actions">
                     <button class="btn btn-seen" onclick="setStatus('${v.id}', 'seen', '${v.channel.replace(/'/g, "\\'")}')">O</button>
@@ -218,13 +169,12 @@
             const row = document.createElement('div');
             row.className = 'channel-row';
             row.innerHTML = `<span class="ch-name" onclick="filterByChannel('${ch.replace(/'/g, "\\'")}')">${ch}</span>
-                             <span class="ch-perc" style="color:${color}">${perc}% Scarti (${m.d}/${total})</span>`;
+                             <span style="color:${color}; font-family:monospace;">${perc}% Scarti (${m.d}/${total})</span>`;
             list.appendChild(row);
         });
     }
 
     function filterByChannel(name) { showTab('feed'); renderFeed(name); }
-
     function showTab(tab) {
         document.getElementById('tab-feed').classList.toggle('hidden', tab !== 'feed');
         document.getElementById('tab-log').classList.toggle('hidden', tab !== 'log');
@@ -232,7 +182,6 @@
         document.getElementById('btn-log').classList.toggle('active', tab === 'log');
         if(tab === 'log') updateLog();
     }
-
     loadData();
 </script>
 </body>
