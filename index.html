@@ -44,23 +44,19 @@
         }
         .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
 
-        /* Stats Panel */
         .stats-container { padding: 16px; max-width: 900px; margin: 0 auto; }
         .stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
         .stat-card { background: var(--surface); padding: 15px; border-left: 3px solid var(--accent); }
         .stat-label { display: block; font-size: 10px; font-family: "IBM Plex Mono"; color: var(--muted); text-transform: uppercase; }
         .stat-num { font-size: 24px; font-weight: 600; color: var(--text); }
 
-        /* Log Table */
         .channel-row { 
             padding: 12px; border-bottom: 1px solid var(--border); 
             display: flex; justify-content: space-between; align-items: center;
         }
-        .ch-name { font-weight: 600; cursor: pointer; color: var(--accent); }
-        .ch-name:hover { text-decoration: underline; }
+        .ch-name { font-weight: 600; cursor: pointer; color: var(--accent); text-decoration: underline; }
         .ch-perc { font-family: "IBM Plex Mono"; font-size: 12px; }
 
-        /* Feed Cards */
         #feed { padding: 10px; max-width: 900px; margin: 0 auto; }
         .video-card {
             background: var(--surface); margin-bottom: 10px; border-radius: 4px;
@@ -96,9 +92,7 @@
 </header>
 
 <div id="tab-feed">
-    <div id="feed">
-        <!-- I video appariranno qui -->
-    </div>
+    <div id="feed"></div>
 </div>
 
 <div id="tab-log" class="hidden">
@@ -114,56 +108,51 @@
             </div>
         </div>
         <h3>Performance Canali (% Scarto)</h3>
-        <div id="channel-list-stats" style="margin-top: 15px;">
-            <!-- Lista canali qui -->
-        </div>
+        <div id="channel-list-stats" style="margin-top: 15px;"></div>
     </div>
 </div>
 
 <script>
+    // URL CORRETTO DELLO SCRIPT
     const GOOGLE_URL = 'https://google.com';
     
-    // Configura qui i tuoi canali (ID YouTube)
+    // Inserisci qui gli ID dei canali che vuoi seguire
     const CHANNELS = [
-        'UC_x5XG1OV2P6uYZ5FSM9P_A', // Esempio: aggiungi i tuoi ID qui
+        'UC_x5XG1OV2P6uYZ5FSM9P_A', 
         'UCv6UtMS5BAX_X6SjI3HtoOg'
     ];
 
     let videoState = {};
     let allVideosCached = [];
 
-    // Carica dati dal server
     async function loadData() {
         try {
             const r = await fetch(GOOGLE_URL);
+            if (!r.ok) throw new Error();
             videoState = await r.json();
             document.getElementById('status').innerText = "Sincronizzato";
             fetchRSS();
         } catch (e) {
             document.getElementById('status').innerText = "Errore connessione";
+            fetchRSS(); // Prova comunque a caricare i video
         }
     }
 
-    // Salva dati sul server
     async function setStatus(id, status, channel) {
-        // Update locale immediato
         videoState[id] = { status: status, channel: channel };
         renderFeed();
-        
         try {
             await fetch(GOOGLE_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 body: JSON.stringify({ videoID: id, status: status, channelName: channel })
             });
-        } catch (e) { console.error("Sync fallito"); }
+        } catch (e) {}
     }
 
-    // Recupera i video tramite RSS (usando un proxy pubblico)
     async function fetchRSS() {
         allVideosCached = [];
         const proxy = 'https://rss2json.com';
-        
         for (let id of CHANNELS) {
             try {
                 const res = await fetch(proxy + encodeURIComponent('https://youtube.com' + id));
@@ -188,11 +177,8 @@
     function renderFeed(filterChannel = null) {
         const container = document.getElementById('feed');
         container.innerHTML = '';
-        
         allVideosCached.forEach(v => {
             const state = videoState[v.id]?.status;
-            
-            // Se non c'è filtro, mostra solo i non letti. Se c'è filtro canale, mostra tutto.
             if (!filterChannel && state) return; 
             if (filterChannel && v.channel !== filterChannel) return;
 
@@ -202,60 +188,42 @@
                 <div class="video-info">
                     <span class="channel-tag">${v.channel}</span>
                     <a href="${v.link}" target="_blank" class="video-title">${v.title}</a>
-                    ${state ? `<span style="font-size:10px; color:var(--accent)">Stato attuale: ${state.toUpperCase()}</span>` : ''}
+                    ${state ? `<span style="font-size:10px; color:var(--accent)">Stato: ${state.toUpperCase()}</span>` : ''}
                 </div>
                 <div class="actions">
                     <button class="btn btn-seen" onclick="setStatus('${v.id}', 'seen', '${v.channel.replace(/'/g, "\\'")}')">O</button>
                     <button class="btn btn-dismiss" onclick="setStatus('${v.id}', 'dismissed', '${v.channel.replace(/'/g, "\\'")}')">X</button>
-                </div>
-            `;
+                </div>`;
             container.appendChild(card);
         });
-        
-        if (container.innerHTML === '') {
-            container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted)">Tutto pulito! Controlla il Log per rivedere i video.</div>';
-        }
     }
 
     function updateLog() {
-        let seen = 0, dismissed = 0;
-        let metrics = {};
-
+        let seen = 0, dismissed = 0, metrics = {};
         Object.values(videoState).forEach(v => {
             if (v.status === 'seen') seen++;
             if (v.status === 'dismissed') dismissed++;
-            
-            if (!metrics[v.channel]) metrics[v.channel] = { s: 0, d: 0 };
-            v.status === 'seen' ? metrics[v.channel].s++ : metrics[v.channel].d++;
+            if (v.channel) {
+                if (!metrics[v.channel]) metrics[v.channel] = { s: 0, d: 0 };
+                v.status === 'seen' ? metrics[v.channel].s++ : metrics[v.channel].d++;
+            }
         });
-
         document.getElementById('total-seen').innerText = seen;
         document.getElementById('total-dismissed').innerText = dismissed;
-
         const list = document.getElementById('channel-list-stats');
         list.innerHTML = '';
-        
         Object.keys(metrics).sort().forEach(ch => {
-            const m = metrics[ch];
-            const total = m.s + m.d;
-            const perc = Math.round((m.d / total) * 100);
+            const m = metrics[ch], total = m.s + m.d, perc = Math.round((m.d / total) * 100);
             const color = perc > 60 ? '#ff6666' : (perc > 30 ? '#ffaa00' : 'var(--seen)');
-
             const row = document.createElement('div');
             row.className = 'channel-row';
-            row.innerHTML = `
-                <span class="ch-name" onclick="filterByChannel('${ch.replace(/'/g, "\\'")}')">${ch}</span>
-                <span class="ch-perc" style="color:${color}">${perc}% Scartati (${m.d}/${total})</span>
-            `;
+            row.innerHTML = `<span class="ch-name" onclick="filterByChannel('${ch.replace(/'/g, "\\'")}')">${ch}</span>
+                             <span class="ch-perc" style="color:${color}">${perc}% Scarti (${m.d}/${total})</span>`;
             list.appendChild(row);
         });
     }
 
-    function filterByChannel(name) {
-        showTab('feed');
-        renderFeed(name);
-        document.getElementById('status').innerText = "Filtro: " + name;
-    }
+    function filterByChannel(name) { showTab('feed'); renderFeed(name); }
 
     function showTab(tab) {
         document.getElementById('tab-feed').classList.toggle('hidden', tab !== 'feed');
@@ -265,7 +233,6 @@
         if(tab === 'log') updateLog();
     }
 
-    // Avvio
     loadData();
 </script>
 </body>
